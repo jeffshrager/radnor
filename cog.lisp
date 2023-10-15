@@ -352,11 +352,11 @@ And my soul from out that shadow that lies floating on the floor
   '(
     ;; Setup factors
     (:factor 0.1 0.5 0.1)
-    (:max-bkg 0.01 0.1 0.01)
+    (:max-bkg 0.01 0.1 0.01) ;; We're gonna skip searching this
     ;; Run factors
-    (:cycles 1 10 1)
-    (:noise-depth-limit 1 5 1)
-    (:context-limit 1 8 1)
+    (:cycles 1 4 1)
+    (:noise-depth-limit 1 3 1)
+    (:context-limit 1 4 1)
     ))
 
 (defun pstart (p) (second (assoc p *params*)))
@@ -368,19 +368,24 @@ And my soul from out that shadow that lies floating on the floor
   )
 
 (defun raven-search (prompt-length)
-  ;; Setup is outer loop as it recreates the rmat
-  (loop for factor from (pstart :factor) to (pend :factor) by (pstep :factor)
-	do (loop for max-bkg from (pstart :max-bkg) to (pend :max-bkg) by (pstep :max-bkg)
-		 do (setup-raven :factor factor :max-bkg max-bkg)
-		 (loop for cycles from (pstart :cycles) to (pend :cycles) by (pstep :cycles)
-		       do (loop for noise-depth-limit from (pstart :noise-depth-limit) to (pend :noise-depth-limit) by (pstep :noise-depth-limit)
-				do (loop for context-limit from (pstart :context-limit) to (pend :context-limit) by (pstep :context-limit)
-					 do (print (list factor max-bkg cycles noise-depth-limit context-limit
-							 (score-raven :cycles cycles
-								      :noise-depth-limit noise-depth-limit
-								      :prompt-length prompt-length
-								      :context-limit context-limit
-								      )))))))))
+  (with-open-file
+      (o "raven-search.drb" :direction :output)
+    ;; Setup is outer loop as it recreates the rmat
+    (loop for factor from (pstart :factor) to (pend :factor) by (pstep :factor)
+	  ;; do (loop for max-bkg from (pstart :max-bkg) to (pend :max-bkg) by (pstep :max-bkg)
+	  with max-bkg = 0.05 ;; Temp instead of searching
+	  do (setup-raven :factor factor :max-bkg max-bkg)
+	  (loop for cycles from (pstart :cycles) to (pend :cycles) by (pstep :cycles)
+		do (loop for noise-depth-limit from (pstart :noise-depth-limit) to (pend :noise-depth-limit) by (pstep :noise-depth-limit)
+			 do (loop for context-limit from (pstart :context-limit) to (pend :context-limit) by (pstep :context-limit)
+				  do (print (print (list factor max-bkg cycles noise-depth-limit context-limit
+						  (score-raven :cycles cycles
+							       :noise-depth-limit noise-depth-limit
+							       :prompt-length prompt-length
+							       :context-limit context-limit
+							       )))
+					    o)
+				  ))))))
 
 (defun score-raven (&key (prompt-length 10) (n-tests-to-average 10) cycles noise-depth-limit context-limit)
   (loop with sum = 0
@@ -404,5 +409,17 @@ And my soul from out that shadow that lies floating on the floor
   
 (untrace)
 ;(trace score-raven caw)
+;(raven-search 5)
+;; Looks like (0.5 0.05 1 1 2 0.12) and (0.4 0.05 1 1 2 0.12) are winners
+(setf *params*
+  '(
+    ;; Setup factors
+    (:factor 0.4 0.5 0.1)
+    (:max-bkg 0.01 0.1 0.01) ;; We're gonna skip searching this
+    ;; Run factors
+    (:cycles 1 1 1)
+    (:noise-depth-limit 1 1 1)
+    (:context-limit 2 2 1)
+    ))
+(trace score-raven caw)
 (raven-search 5)
-
