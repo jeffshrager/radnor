@@ -24,13 +24,13 @@
 
 (defun dtree-learn (&optional (dtree *dtree*) (upnode nil))
   (cond ((null dtree) ;; Special case for very first time in.
-	 (let ((animal (read-from-string (ask "What is it (just the animal, not with 'a' or 'an'?"))))
+	 (let ((animal (read-from-string (ask "What is it (just the animal, not with 'a' or 'an')?"))))
 	   (setf *dtree* animal)
 	   (dtree-inner)))
 	((atom dtree)
 	 (if (yes-or-no-p "Is it a ~a?" dtree)
 	     (dtree-inner)
-	     (let* ((animal (read-from-string (ask "What is it (just the animal, not with 'a' or 'an'?")))
+	     (let* ((animal (read-from-string (ask "What is it (just the animal, not with 'a' or 'an')?")))
 		    (question (ask (format nil "What is a question that is yes for a(n) ~a and no for a(n) ~a" animal dtree))))
 	       (if upnode
 		   (nsubst `(,question ,animal ,dtree) dtree upnode)
@@ -513,9 +513,19 @@ And my soul from out that shadow that lies floating on the floor
 (raven-search 5)
 |#
 
-(setf *dtree* '("does it bark" ("is it a common pet" RACOON DOG)
- ("does it live in africa" ("does it live in water" HIPPO GIRAFFE)
-  ("is it huge" MOOSE CAT))))
+(setf *dtree*
+      '("Is it a kind of monkey?"
+	("Did Dianne Fosse study them?" APE
+	 ("Are they matriarcal?" BONOBO
+	  ("Does they have stripped tails?" LEMUR
+					    ("Does they program computers?" HUMAN BABOON))))
+	("Does it have a long neck?"
+	 ("Is it a bird?" ("Are they the heaviest flying bird?" SWAN HERON) GIRAFFE)
+	 ("Does it live in water?"
+	  ("Does it have a shell?" TURTLE
+				   ("Does it live in the ocean?" ("Do they bark?" SEAL WHALE) HIPPO))
+	  ("Is it cold blooded?" ("Does it live in soil?" WORM LIZARD)
+				 ("Is it the king of the beasts?" LION CAT))))))
 
 (defun create-smat-from-dtree ()
   (cache-paths-to-leaves)
@@ -532,7 +542,7 @@ And my soul from out that shadow that lies floating on the floor
 
 (setq *smat* (create-smat-from-dtree))
 
-(defparameter *initsymvals* '((cat 1.0) (racoon 1.0)))
+(defparameter *initsymvals* '((cat 1.0) (human 1.0)))
 (defun sstest2 (initsymvals &optional (cycles 10))
   (print *smat*)
   (let* ((initsymvec (symvals->symvec initsymvals *smat*)))
