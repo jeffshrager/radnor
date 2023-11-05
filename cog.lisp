@@ -2,6 +2,8 @@
 (setf *random-state* (make-random-state t))
 (ql:quickload :lla)
 
+;;; dot -Tpdf btree.dot -o btree.pdf
+
 ;;; =====================================================================
 
 ;;; A semantic network is given by a set of relationship between N
@@ -558,6 +560,46 @@ And my soul from out that shadow that lies floating on the floor
     (spreadloop *smat* initsymvec cycles :trace-n t)))
 (sstest2 *initsymvals*)
 |#
+
+(defun dtree2dot (&optional (dtree *dtree*))
+  (with-open-file (o "tree.dot" :direction :output :if-exists :supersede)
+    (format o "digraph BTree {
+  node [shape=record];
+
+  // Graph direction (top to bottom)
+  rankdir=TB;
+
+  // Define the B-tree nodes with keys and child pointers
+")
+    (dtreeout o dtree)
+    (format o "~%}~%" )))
+
+`(defun dtreeout (o tree &optional (up "root"))
+  (if (atom (second tree))
+      (format o "~s -> ~s [label=\"yes\"];~%" up (second tree))
+      (progn 
+	;;(format o "~s -> ~s [label=\"yes\"];~%" up (first tree))
+	(format o "~s -> ~s [label=\"yes\"];~%" (first tree) (car (second tree)))
+	(dtreeout o (second tree) (first tree))))
+  (if (atom (third tree))
+      (format o "~s -> ~s [label=\"no\"];~%" up (third tree))
+      (progn 
+	;;(format o "~s -> ~s [label=\"no\"];~%" up (first tree))
+	(format o "~s -> ~s [label=\"no\"];~%" (first tree) (car (third tree)))
+	(dtreeout o (third tree) (first tree)))))
+
+(defun dtreeout (o tree)
+  (if (atom (second tree))
+      (format o "~s -> ~s [label=\"yes\"];~%" (first tree) (second tree))
+      (progn 
+	(format o "~s -> ~s [label=\"yes\"];~%" (first tree) (car (second tree)))
+	(dtreeout o (second tree))))
+  (if (atom (third tree))
+      (format o "~s -> ~s [label=\"no\"];~%" (first tree) (third tree))
+      (progn 
+	(format o "~s -> ~s [label=\"no\"];~%" (first tree) (car (third tree)))
+	(dtreeout o (third tree)))))
+
 
 ;;; =====================================================================
 ;;; Markov model RAVEN from Old Stemhacks code
