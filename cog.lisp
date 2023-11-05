@@ -81,11 +81,12 @@
     ))
 
 (defun distance-between (l1 l2)
-  (let* ((p1 (path-to l1))
-	 (p2 (path-to l2)))
-    (- (+ (length p1) (length p2))
-       (* 2 (depth-to-common-node p1 p2)))))
-	  
+  (if (equal l1 l2) 0
+      (let* ((p1 (path-to l1))
+	     (p2 (path-to l2)))
+	(- (+ (length p1) (length p2))
+	   (* 2 (depth-to-common-node p1 p2))))))
+  
 ;;; A semantic network is given by a set of relationship between N
 ;;; objects. All you need to do is define the strength of association
 ;;; between the symbols. The association is assumed to be symmetric,
@@ -247,7 +248,7 @@ That I scarce was sure I heard you  here I opened wide the door
     Deep into that darkness peering  long I stood there wondering  fearing 
 Doubting  dreaming dreams no mortal ever dared to dream before 
     But the silence was unbroken  and the stillness gave no token 
-    And the only word there spoken was the whispered word   Lenore? 
+    And the only word there spoken was the whispered word   Lenore 
 This I whispered  and an echo murmured back the word   Lenore   
             Merely this and nothing more 
 
@@ -269,7 +270,7 @@ Then this ebony bird beguiling my sad fancy into smiling
 By the grave and stern decorum of the countenance it wore 
  Though thy crest be shorn and shaven  thou   I said   art sure no craven 
 Ghastly grim and ancient Raven wandering from the Nightly shore 
-Tell me what thy lordly name is on the Night s Plutonian shore  
+Tell me what thy lordly name is on the Nights Plutonian shore  
             Quoth the Raven  Nevermore  
 
     Much I marvelled this ungainly fowl to hear discourse so plainly 
@@ -301,9 +302,9 @@ What this grim  ungainly  ghastly  gaunt  and ominous bird of yore
             Meant in croaking  Nevermore  
 
     This I sat engaged in guessing  but no syllable expressing
-To the fowl whose fiery eyes now burned into my bosom s core 
+To the fowl whose fiery eyes now burned into my bosoms core 
     This and more I sat divining  with my head at ease reclining
-    On the cushion s velvet lining that the lamp-light gloated o er 
+    On the cushions velvet lining that the lamp-light gloated o er 
 But whose velvet-violet lining with the lamp-light gloating o er 
             She shall press  ah  nevermore 
 
@@ -318,7 +319,7 @@ Quaff  oh quaff this kind nepenthe and forget this lost Lenore
 Whether Tempter sent  or whether tempest tossed thee here ashore 
     Desolate yet all undaunted  on this desert land enchanted 
     On this home by Horror haunted tell me truly  I implore 
-Is there is there balm in Gilead? tell me tell me  I implore  
+Is there is there balm in Gilead tell me tell me  I implore  
             Quoth the Raven  Nevermore  
 
      Prophet   said I   thing of evil  prophet still  if bird or devil 
@@ -329,7 +330,7 @@ Clasp a rare and radiant maiden whom the angels name Lenore
             Quoth the Raven  Nevermore  
 
      Be that word our sign of parting  bird or fiend   I shrieked  upstarting 
- Get thee back into the tempest and the Night s Plutonian shore 
+ Get thee back into the tempest and the Nights Plutonian shore 
     Leave no black plume as a token of that lie thy soul hath spoken 
     Leave my loneliness unbroken  quit the bust above my door 
 Take thy beak from out my heart  and take thy form from off my door  
@@ -337,7 +338,7 @@ Take thy beak from out my heart  and take thy form from off my door
 
     And the Raven  never flitting  still is sitting  still is sitting
 On the pallid bust of Pallas just above my chamber door 
-    And his eyes have all the seeming of a demon s that is dreaming 
+    And his eyes have all the seeming of a demons that is dreaming 
     And the lamp-light o er him streaming throws his shadow on the floor 
 And my soul from out that shadow that lies floating on the floor
     Shall be lifted nevermore ))
@@ -367,7 +368,7 @@ And my soul from out that shadow that lies floating on the floor
      (loop for a.b being the hash-keys of *w1.w2->count*
 	   using (hash-value count)
 	   collect (list (car a.b) count (cdr a.b)))
-     :selfref? nil
+     :selfref nil
      :symmetric? nil
      :max-bkg max-bkg)
     ))
@@ -456,7 +457,7 @@ And my soul from out that shadow that lies floating on the floor
 
 (defun raven-search (prompt-length)
   (with-open-file
-      (o "raven-search.drb" :direction :output)
+      (o "raven-search.drb" :direction :output :if-exists :supersede)
     ;; Setup is outer loop as it recreates the rmat
     (loop for factor from (pstart :factor) to (pend :factor) by (pstep :factor)
 	  ;; do (loop for max-bkg from (pstart :max-bkg) to (pend :max-bkg) by (pstep :max-bkg)
@@ -494,7 +495,6 @@ And my soul from out that shadow that lies floating on the floor
 	finally (return (float (/ sum n-tests-to-average)))
 	))
   
-#|
 (untrace)
 ;(trace score-raven caw)
 ;(raven-search 5)
@@ -511,7 +511,6 @@ And my soul from out that shadow that lies floating on the floor
     ))
 (trace score-raven caw)
 (raven-search 5)
-|#
 
 (setf *dtree*
       '("Is it a kind of monkey?"
