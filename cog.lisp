@@ -11,7 +11,7 @@
 ;;; between the symbols. The association is assumed to be symmetric,
 ;;; and 0.0 when unspecified.
 
-(defun relations-to-dot (relations file)
+(defun relations2dot (relations file)
   (with-open-file (o file :direction :output :if-exists :supersede)
     (format o "digraph G {
 ~{  ~A -> ~A [label=\"~A\"];
@@ -125,7 +125,7 @@
     brake glass water drink teen eat swim drown hospital))
 (defparameter *snet* (create-random-network *terms*))
 (defparameter *smat* (snet->smat *snet*))
-(relations-to-dot *snet* "ss.dot")
+(relations2dot *snet* "ss.dot")
 (defparameter *initsymvals* '((drown 1.0)))
 (defun sstest1 (initsymvals &optional (cycles 10))
   (print *smat*)
@@ -225,12 +225,12 @@ What this grim  ungainly  ghastly  gaunt  and ominous bird of yore
     This I sat engaged in guessing  but no syllable expressing
 To the fowl whose fiery eyes now burned into my bosoms core 
     This and more I sat divining  with my head at ease reclining
-    On the cushions velvet lining that the lamp-light gloated o er 
-But whose velvet-violet lining with the lamp-light gloating o er 
+    On the cushions velvet lining that the lamplight gloated oer 
+But whose velvet violet lining with the lamplight gloating oer 
             She shall press  ah  nevermore 
 
     Then  methought  the air grew denser  perfumed from an unseen censer
-Swung by Seraphim whose foot-falls tinkled on the tufted floor 
+Swung by Seraphim whose footfalls tinkled on the tufted floor 
      Wretch   I cried   thy God hath lent thee by these angels he hath sent thee
     Respite respite and nepenthe from thy memories of Lenore 
 Quaff  oh quaff this kind nepenthe and forget this lost Lenore  
@@ -260,7 +260,7 @@ Take thy beak from out my heart  and take thy form from off my door
     And the Raven  never flitting  still is sitting  still is sitting
 On the pallid bust of Pallas just above my chamber door 
     And his eyes have all the seeming of a demons that is dreaming 
-    And the lamp-light o er him streaming throws his shadow on the floor 
+    And the lamplight oer him streaming throws his shadow on the floor 
 And my soul from out that shadow that lies floating on the floor
     Shall be lifted nevermore ))
 
@@ -574,20 +574,6 @@ And my soul from out that shadow that lies floating on the floor
     (dtreeout o dtree)
     (format o "~%}~%" )))
 
-`(defun dtreeout (o tree &optional (up "root"))
-  (if (atom (second tree))
-      (format o "~s -> ~s [label=\"yes\"];~%" up (second tree))
-      (progn 
-	;;(format o "~s -> ~s [label=\"yes\"];~%" up (first tree))
-	(format o "~s -> ~s [label=\"yes\"];~%" (first tree) (car (second tree)))
-	(dtreeout o (second tree) (first tree))))
-  (if (atom (third tree))
-      (format o "~s -> ~s [label=\"no\"];~%" up (third tree))
-      (progn 
-	;;(format o "~s -> ~s [label=\"no\"];~%" up (first tree))
-	(format o "~s -> ~s [label=\"no\"];~%" (first tree) (car (third tree)))
-	(dtreeout o (third tree) (first tree)))))
-
 (defun dtreeout (o tree)
   (if (atom (second tree))
       (format o "~s -> ~s [label=\"yes\"];~%" (first tree) (second tree))
@@ -681,11 +667,11 @@ And my soul from out that shadow that lies floating on the floor
     ((This I sat engaged in guessing but no syllable expressing)
      (To the fowl whose fiery eyes now burned into my bosoms core)
      (This and more I sat divining with my head at ease reclining)
-     (On the cushions velvet lining that the lamp-light gloated o er)
-     (But whose velvet-violet lining with the lamp-light gloating o er)
+     (On the cushions velvet lining that the lamplight gloated oer)
+     (But whose velvet violet lining with the lamplight gloating oer)
      (She shall press ah nevermore))
     ((Then methought the air grew denser perfumed from an unseen censer)
-     (Swung by Seraphim whose foot-falls tinkled on the tufted floor)
+     (Swung by Seraphim whose footfalls tinkled on the tufted floor)
      (Wretch I cried thy God hath lent thee by these angels he hath sent thee)
      (Respite respite and nepenthe from thy memories of Lenore)
      (Quaff oh quaff this kind nepenthe and forget this lost Lenore)
@@ -711,7 +697,7 @@ And my soul from out that shadow that lies floating on the floor
     ((And the Raven never flitting still is sitting still is sitting)
      (On the pallid bust of Pallas just above my chamber door)
      (And his eyes have all the seeming of a demons that is dreaming)
-     (And the lamp-light o er him streaming throws his shadow on the floor)
+     (And the lamplight oer him streaming throws his shadow on the floor)
      (And my soul from out that shadow that lies floating on the floor)
      (Shall be lifted nevermore))
     ))
@@ -757,6 +743,19 @@ And my soul from out that shadow that lies floating on the floor
 		 collect (list (length next-words) this-word next-words))
 	   #'> :key #'car)))
 
+(defun wt2dot () ;; word table to dot
+  (with-open-file (o "raven.dot" :direction :output :if-exists :supersede)
+    (format o "digraph BTree {~%")
+    (loop for this-word being the hash-keys of *thisword->nextwords*
+	  using (hash-value next-words)
+	  do (loop for next-word in next-words
+		   with seenwords = nil
+		   unless (member next-word seenwords)
+		   do (format o "~a -> ~a [penwidth=~a];~%"
+			      this-word next-word (count next-word next-words))
+		   (pushnew next-word seenwords)))
+    (format o "~%}~%" )))
+
 (format t "~%~%===================================================~%~%")
 (learn-raven)
 (format t "~%~%===================================================~%~%")
@@ -766,3 +765,4 @@ And my soul from out that shadow that lies floating on the floor
 (format t "~%~%===================================================~%~%")
 (compose-poem :free-length? nil)
 (format t "~%~%===================================================~%~%")
+(wt2dot)
