@@ -696,7 +696,7 @@ And my soul from out that shadow that lies floating on the floor
         do (setq cur nxt)
         collect cur))
 
-(defun compose-poem ()
+(defun compose-poem (&key (free-length? t))
   (loop for paragraph in *structured-raven*
 	do (format t "~%~%")
 	(loop for sentence in paragraph
@@ -704,13 +704,23 @@ And my soul from out that shadow that lies floating on the floor
               if (= this-length 0)
               do (print nil)
               else do (print (loop for random-line = (compose-line)
-				   until (= this-length (length random-line))
+				   until (or free-length? (= this-length (length random-line)))
 				   finally (return random-line))))))
 
 (defun stwt () ;; show-*thisword->nextwords*-table
-  (loop for this-word being the hash-keys of *thisword->nextwords*
-	using (hash-value next-words)
-	do (print (list this-word next-words))))
+  (mapcar #'print
+	  (sort 
+	   (loop for this-word being the hash-keys of *thisword->nextwords*
+		 using (hash-value next-words)
+		 collect (list (length next-words) this-word next-words))
+	   #'> :key #'car)))
 
+(format t "~%~%===================================================~%~%")
 (learn-raven)
-(compose-poem)
+(format t "~%~%===================================================~%~%")
+(stwt)
+(format t "~%~%===================================================~%~%")
+(compose-poem :free-length? t)
+(format t "~%~%===================================================~%~%")
+(compose-poem :free-length? nil)
+(format t "~%~%===================================================~%~%")
