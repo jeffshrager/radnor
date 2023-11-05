@@ -2,6 +2,90 @@
 (setf *random-state* (make-random-state t))
 (ql:quickload :lla)
 
+;;; Create a decision tree by asking questions.
+
+;;; The dtree is a set of triples comprising a distinguishing
+;;; question, and then a left/yes branch and a right/no branch. 
+
+(defvar *dtree* nil)
+
+(defun dtree ()
+  (dtree-reset))
+
+(defun dtree-reset ()
+  (setf *dtree* nil)
+  (dtree-inner)
+  )
+
+(defun dtree-inner ()
+  (format t "Think of an animal.") (terpri)
+  (sleep 1)
+  (dtree-learn))
+
+(defun dtree-learn (&optional (dtree *dtree*) (upnode nil))
+  (cond ((null dtree) ;; Special case for very first time in.
+	 (let ((animal (read-from-string (ask "What is it (just the animal, not with 'a' or 'an'?"))))
+	   (setf *dtree* animal)
+	   (dtree-inner)))
+	((atom dtree)
+	 (if (yes-or-no-p "Is it a ~a?" dtree)
+	     (dtree-inner)
+	     (let* ((animal (read-from-string (ask "What is it (just the animal, not with 'a' or 'an'?")))
+		    (question (ask (format nil "What is a question that is yes for a(n) ~a and no for a(n) ~a" animal dtree))))
+	       (if upnode
+		   (nsubst `(,question ,animal ,dtree) dtree upnode)
+		   (setf *dtree* `(,question ,animal ,dtree)))
+	       (dtree-inner))))
+	(t (if (yes-or-no-p (first dtree))
+	       (dtree-learn (second dtree) dtree)
+	       (dtree-learn (third dtree) dtree)
+	       ))
+	))
+
+(defun ask (question)
+  (format t question) (terpri)
+  (read-line)) 
+
+;;; To compute distance matrix we need to be able to compute the
+;;; length of the patth the root and each leaf.
+
+(defvar *paths* nil)
+
+(defun cache-paths-to-leaves ()
+  (setf *paths* nil)
+  (path-to-leaves-r *dtree* nil)
+  (mapcar #'print *paths*)
+  :done
+  )
+
+(defun path-to-leaves-r (tree path)
+  (cond ((atom tree) (push (cons tree (reverse path)) *paths*))
+       	(t (list (path-to-leaves-r (second tree) (cons (cons :yes (first tree)) path))
+		 (path-to-leaves-r (third tree) (cons (cons :no (first tree)) path))))))
+
+
+;;; Now we can make the distance matrix between the leaves
+
+(defun all-leaves ()
+  (mapcar #'car *paths*))
+
+(defun path-to (leaf)
+  (cdr (assoc leaf *paths* :test #'string-equal)))
+
+(defun length-to (leaf)
+  (length (path-to leaf)))
+
+(defun depth-to-common-node (p1 p2)
+  (let* ((cn (cdar (intersection p1 p2 :test #'(lambda (a b) (equal (cdr a) (cdr b))))))) ;; Ignore the yes/no
+    (position cn p1 :test #'(lambda (a b) (equal a (cdr b)))) 
+    ))
+
+(defun distance-between (l1 l2)
+  (let* ((p1 (path-to l1))
+	 (p2 (path-to l2)))
+    (- (+ (length p1) (length p2))
+       (* 2 (depth-to-common-node p1 p2)))))
+	  
 ;;; A semantic network is given by a set of relationship between N
 ;;; objects. All you need to do is define the strength of association
 ;;; between the symbols. The association is assumed to be symmetric,
@@ -112,6 +196,8 @@
 	(when trace-n (symvpprint smat symvec :trace-n trace-n :vsort? t))
 	finally (return symvec)))
 
+#|
+
 ;;; Semantic Net Testing:
 
 (defparameter *terms*
@@ -127,6 +213,7 @@
     (symvpprint *smat* initsymvec :vsort? t)
     (spreadloop *smat* initsymvec cycles :trace-n t)))
 ;(sstest1 *initsymvals*)
+|#
 
 (defparameter *the-raven*
   '(Once upon a midnight dreary while I pondered  weak and weary
@@ -407,6 +494,7 @@ And my soul from out that shadow that lies floating on the floor
 	finally (return (float (/ sum n-tests-to-average)))
 	))
   
+#|
 (untrace)
 ;(trace score-raven caw)
 ;(raven-search 5)
@@ -423,3 +511,31 @@ And my soul from out that shadow that lies floating on the floor
     ))
 (trace score-raven caw)
 (raven-search 5)
+|#
+
+(setf *dtree* '("does it bark" ("is it a common pet" RACOON DOG)
+ ("does it live in africa" ("does it live in water" HIPPO GIRAFFE)
+  ("is it huge" MOOSE CAT))))
+
+(defun create-smat-from-dtree ()
+  (cache-paths-to-leaves)
+  (let* ((syms (all-leaves))
+	(nsyms (length syms))
+	(smat (make-array (list nsyms nsyms))))
+    (loop for sym1 in syms
+	  as p1 from 0 by 1
+	  do (loop for sym2 in syms
+		   as p2 from 0 by 1
+		   as d = (distance-between sym1 sym2)
+		   do (setf (aref smat p1 p2) (- d))))
+    (make-smat :syms syms :mat smat)))
+
+(setq *smat* (create-smat-from-dtree))
+
+(defparameter *initsymvals* '((cat 1.0) (racoon 1.0)))
+(defun sstest2 (initsymvals &optional (cycles 10))
+  (print *smat*)
+  (let* ((initsymvec (symvals->symvec initsymvals *smat*)))
+    (symvpprint *smat* initsymvec :vsort? t)
+    (spreadloop *smat* initsymvec cycles :trace-n t)))
+(sstest2 *initsymvals*)
