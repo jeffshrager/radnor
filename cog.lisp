@@ -2,91 +2,8 @@
 (setf *random-state* (make-random-state t))
 (ql:quickload :lla)
 
-;;; Create a decision tree by asking questions.
+;;; =====================================================================
 
-;;; The dtree is a set of triples comprising a distinguishing
-;;; question, and then a left/yes branch and a right/no branch. 
-
-(defvar *dtree* nil)
-
-(defun dtree ()
-  (dtree-reset))
-
-(defun dtree-reset ()
-  (setf *dtree* nil)
-  (dtree-inner)
-  )
-
-(defun dtree-inner ()
-  (format t "Think of an animal.") (terpri)
-  (sleep 1)
-  (dtree-learn))
-
-(defun dtree-learn (&optional (dtree *dtree*) (upnode nil))
-  (cond ((null dtree) ;; Special case for very first time in.
-	 (let ((animal (read-from-string (ask "What is it (just the animal, not with 'a' or 'an')?"))))
-	   (setf *dtree* animal)
-	   (dtree-inner)))
-	((atom dtree)
-	 (if (yes-or-no-p "Is it a ~a?" dtree)
-	     (dtree-inner)
-	     (let* ((animal (read-from-string (ask "What is it (just the animal, not with 'a' or 'an')?")))
-		    (question (ask (format nil "What is a question that is yes for a(n) ~a and no for a(n) ~a" animal dtree))))
-	       (if upnode
-		   (nsubst `(,question ,animal ,dtree) dtree upnode)
-		   (setf *dtree* `(,question ,animal ,dtree)))
-	       (dtree-inner))))
-	(t (if (yes-or-no-p (first dtree))
-	       (dtree-learn (second dtree) dtree)
-	       (dtree-learn (third dtree) dtree)
-	       ))
-	))
-
-(defun ask (question)
-  (format t question) (terpri)
-  (read-line)) 
-
-;;; To compute distance matrix we need to be able to compute the
-;;; length of the patth the root and each leaf.
-
-(defvar *paths* nil)
-
-(defun cache-paths-to-leaves ()
-  (setf *paths* nil)
-  (path-to-leaves-r *dtree* nil)
-  (mapcar #'print *paths*)
-  :done
-  )
-
-(defun path-to-leaves-r (tree path)
-  (cond ((atom tree) (push (cons tree (reverse path)) *paths*))
-       	(t (list (path-to-leaves-r (second tree) (cons (cons :yes (first tree)) path))
-		 (path-to-leaves-r (third tree) (cons (cons :no (first tree)) path))))))
-
-
-;;; Now we can make the distance matrix between the leaves
-
-(defun all-leaves ()
-  (mapcar #'car *paths*))
-
-(defun path-to (leaf)
-  (cdr (assoc leaf *paths* :test #'string-equal)))
-
-(defun length-to (leaf)
-  (length (path-to leaf)))
-
-(defun depth-to-common-node (p1 p2)
-  (let* ((cn (cdar (intersection p1 p2 :test #'(lambda (a b) (equal (cdr a) (cdr b))))))) ;; Ignore the yes/no
-    (position cn p1 :test #'(lambda (a b) (equal a (cdr b)))) 
-    ))
-
-(defun distance-between (l1 l2)
-  (if (equal l1 l2) 0
-      (let* ((p1 (path-to l1))
-	     (p2 (path-to l2)))
-	(- (+ (length p1) (length p2))
-	   (* 2 (depth-to-common-node p1 p2))))))
-  
 ;;; A semantic network is given by a set of relationship between N
 ;;; objects. All you need to do is define the strength of association
 ;;; between the symbols. The association is assumed to be symmetric,
@@ -215,6 +132,8 @@
     (spreadloop *smat* initsymvec cycles :trace-n t)))
 ;(sstest1 *initsymvals*)
 |#
+
+;;; =====================================================================
 
 (defparameter *the-raven*
   '(Once upon a midnight dreary while I pondered  weak and weary
@@ -368,7 +287,7 @@ And my soul from out that shadow that lies floating on the floor
      (loop for a.b being the hash-keys of *w1.w2->count*
 	   using (hash-value count)
 	   collect (list (car a.b) count (cdr a.b)))
-     :selfref nil
+     :selfref? nil
      :symmetric? nil
      :max-bkg max-bkg)
     ))
@@ -495,6 +414,7 @@ And my soul from out that shadow that lies floating on the floor
 	finally (return (float (/ sum n-tests-to-average)))
 	))
   
+#|
 (untrace)
 ;(trace score-raven caw)
 ;(raven-search 5)
@@ -511,7 +431,95 @@ And my soul from out that shadow that lies floating on the floor
     ))
 (trace score-raven caw)
 (raven-search 5)
+|#
 
+;;; =====================================================================
+
+;;; Create a decision tree by asking questions.
+
+;;; The dtree is a set of triples comprising a distinguishing
+;;; question, and then a left/yes branch and a right/no branch. 
+
+(defvar *dtree* nil)
+
+(defun dtree ()
+  (dtree-reset))
+
+(defun dtree-reset ()
+  (setf *dtree* nil)
+  (dtree-inner)
+  )
+
+(defun dtree-inner ()
+  (format t "Think of an animal.") (terpri)
+  (sleep 1)
+  (dtree-learn))
+
+(defun dtree-learn (&optional (dtree *dtree*) (upnode nil))
+  (cond ((null dtree) ;; Special case for very first time in.
+	 (let ((animal (read-from-string (ask "What is it (just the animal, not with 'a' or 'an')?"))))
+	   (setf *dtree* animal)
+	   (dtree-inner)))
+	((atom dtree)
+	 (if (yes-or-no-p "Is it a ~a?" dtree)
+	     (dtree-inner)
+	     (let* ((animal (read-from-string (ask "What is it (just the animal, not with 'a' or 'an')?")))
+		    (question (ask (format nil "What is a question that is yes for a(n) ~a and no for a(n) ~a" animal dtree))))
+	       (if upnode
+		   (nsubst `(,question ,animal ,dtree) dtree upnode)
+		   (setf *dtree* `(,question ,animal ,dtree)))
+	       (dtree-inner))))
+	(t (if (yes-or-no-p (first dtree))
+	       (dtree-learn (second dtree) dtree)
+	       (dtree-learn (third dtree) dtree)
+	       ))
+	))
+
+(defun ask (question)
+  (format t question) (terpri)
+  (read-line)) 
+
+;;; To compute distance matrix we need to be able to compute the
+;;; length of the patth the root and each leaf.
+
+(defvar *paths* nil)
+
+(defun cache-paths-to-leaves ()
+  (setf *paths* nil)
+  (path-to-leaves-r *dtree* nil)
+  (mapcar #'print *paths*)
+  :done
+  )
+
+(defun path-to-leaves-r (tree path)
+  (cond ((atom tree) (push (cons tree (reverse path)) *paths*))
+       	(t (list (path-to-leaves-r (second tree) (cons (cons :yes (first tree)) path))
+		 (path-to-leaves-r (third tree) (cons (cons :no (first tree)) path))))))
+
+
+;;; Now we can make the distance matrix between the leaves
+
+(defun all-leaves ()
+  (mapcar #'car *paths*))
+
+(defun path-to (leaf)
+  (cdr (assoc leaf *paths* :test #'string-equal)))
+
+(defun length-to (leaf)
+  (length (path-to leaf)))
+
+(defun depth-to-common-node (p1 p2)
+  (let* ((cn (cdar (intersection p1 p2 :test #'(lambda (a b) (equal (cdr a) (cdr b))))))) ;; Ignore the yes/no
+    (position cn p1 :test #'(lambda (a b) (equal a (cdr b)))) 
+    ))
+
+(defun distance-between (l1 l2)
+  (if (equal l1 l2) 0
+      (let* ((p1 (path-to l1))
+	     (p2 (path-to l2)))
+	(- (+ (length p1) (length p2))
+	   (* 2 (depth-to-common-node p1 p2))))))
+  
 (setf *dtree*
       '("Is it a kind of monkey?"
 	("Did Dianne Fosse study them?" APE
@@ -539,6 +547,7 @@ And my soul from out that shadow that lies floating on the floor
 		   do (setf (aref smat p1 p2) (- d))))
     (make-smat :syms syms :mat smat)))
 
+#|
 (setq *smat* (create-smat-from-dtree))
 
 (defparameter *initsymvals* '((cat 1.0) (human 1.0)))
@@ -548,3 +557,160 @@ And my soul from out that shadow that lies floating on the floor
     (symvpprint *smat* initsymvec :vsort? t)
     (spreadloop *smat* initsymvec cycles :trace-n t)))
 (sstest2 *initsymvals*)
+|#
+
+;;; =====================================================================
+;;; Markov model RAVEN from Old Stemhacks code
+
+(defparameter *structured-raven*
+  '(
+    ((Once upon a midnight dreary while I pondered weak and weary)
+     (Over many a quaint and curious volume of forgotten lore)
+     (While I nodded nearly napping suddenly there came a tapping)
+     (As of some one gently rapping rapping at my chamber door)
+     (Tis some visitor I muttered tapping at my chamber door)
+     (Only this and nothing more))
+    ((Ah distinctly I remember it was in the bleak December)
+     (And each separate dying ember wrought its ghost upon the floor)
+     (Eagerly I wished the morrow vainly I had sought to borrow)
+     (From my books surcease of sorrow sorrow for the lost Lenore)
+     (For the rare and radiant maiden whom the angels name Lenore)
+     (Nameless here for evermore))
+    ((And the silken sad uncertain rustling of each purple curtain)
+     (Thrilled me filled me with fantastic terrors never felt before)
+     (So that now to still the beating of my heart I stood repeating)
+     (Tis some visitor entreating entrance at my chamber door)
+     (Some late visitor entreating entrance at my chamber door)
+     (This it is and nothing more))
+    ((Presently my soul grew stronger hesitating then no longer)
+     (Sir said I or Madam truly your forgiveness I implore)
+     (But the fact is I was napping and so gently you came rapping)
+     (And so faintly you came tapping tapping at my chamber door)
+     (That I scarce was sure I heard you here I opened wide the door)
+     (Darkness there and nothing more))
+    ((Deep into that darkness peering long I stood there wondering fearing)
+     (Doubting dreaming dreams no mortal ever dared to dream before)
+     (But the silence was unbroken and the stillness gave no token)
+     (And the only word there spoken was the whispered word Lenore)
+     (This I whispered and an echo murmured back the word Lenore)
+     (Merely this and nothing more))
+    ((Back into the chamber turning all my soul within me burning)
+     (Soon again I heard a tapping somewhat louder than before)
+     (Surely said I surely that is something at my window lattice)
+     (Let me see then what thereat is and this mystery explore)
+     (Let my heart be still a moment and this mystery explore)
+     (Tis the wind and nothing more))
+    ((Open here I flung the shutter when with many a flirt and flutter)
+     (In there stepped a stately Raven of the saintly days of yore)
+     (Not the least obeisance made he not a minute stopped or stayed he)
+     (But with mien of lord or lady perched above my chamber door)
+     (Perched upon a bust of Pallas just above my chamber door)
+     (Perched and sat and nothing more))
+    ((Then this ebony bird beguiling my sad fancy into smiling)
+     (By the grave and stern decorum of the countenance it wore)
+     (Though thy crest be shorn and shaven thou I said art sure no craven)
+     (Ghastly grim and ancient Raven wandering from the Nightly shore)
+     (Tell me what thy lordly name is on the Nights Plutonian shore)
+     (Quoth the Raven Nevermore))
+    ((Much I marvelled this ungainly fowl to hear discourse so plainly)
+     (Though its answer little meaning little relevancy bore)
+     (For we cannot help agreeing that no living human being)
+     (Ever yet was blessed with seeing bird above his chamber door)
+     (Bird or beast upon the sculptured bust above his chamber door)
+     (With such name as Nevermore))
+    ((But the Raven sitting lonely on the placid bust spoke only)
+     (That one word as if his soul in that one word he did outpour)
+     (Nothing farther then he uttered not a feather then he fluttered)
+     (Till I scarcely more than muttered Other friends have flown before)
+     (On the morrow he will leave me as my Hopes have flown before)
+     (Then the bird said Nevermore))
+    ((Startled at the stillness broken by reply so aptly spoken)
+     (Doubtless said I what it utters is its only stock and store)
+     (Caught from some unhappy master whom unmerciful Disaster)
+     (Followed fast and followed faster till his songs one burden bore)
+     (Till the dirges of his Hope that melancholy burden bore)
+     (Of Never nevermore))
+    ((But the Raven still beguiling all my fancy into smiling)
+     (Straight I wheeled a cushioned seat in front of bird and bust and door)
+     (Then upon the velvet sinking I betook myself to linking)
+     (Fancy unto fancy thinking what this ominous bird of yore)
+     (What this grim ungainly ghastly gaunt and ominous bird of yore)
+     (Meant in croaking Nevermore))
+    ((This I sat engaged in guessing but no syllable expressing)
+     (To the fowl whose fiery eyes now burned into my bosoms core)
+     (This and more I sat divining with my head at ease reclining)
+     (On the cushions velvet lining that the lamp-light gloated o er)
+     (But whose velvet-violet lining with the lamp-light gloating o er)
+     (She shall press ah nevermore))
+    ((Then methought the air grew denser perfumed from an unseen censer)
+     (Swung by Seraphim whose foot-falls tinkled on the tufted floor)
+     (Wretch I cried thy God hath lent thee by these angels he hath sent thee)
+     (Respite respite and nepenthe from thy memories of Lenore)
+     (Quaff oh quaff this kind nepenthe and forget this lost Lenore)
+     (Quoth the Raven Nevermore))
+    ((Prophet said I thing of evil prophet still if bird or devil)
+     (Whether Tempter sent or whether tempest tossed thee here ashore)
+     (Desolate yet all undaunted on this desert land enchanted)
+     (On this home by Horror haunted tell me truly I implore)
+     (Is there is there balm in Gilead tell me tell me I implore)
+     (Quoth the Raven Nevermore))
+    ((Prophet said I thing of evil prophet still if bird or devil)
+     (By that Heaven that bends above us by that God we both adore)
+     (Tell this soul with sorrow laden if within the distant Aidenn)
+     (It shall clasp a sainted maiden whom the angels name Lenore)
+     (Clasp a rare and radiant maiden whom the angels name Lenore)
+     (Quoth the Raven Nevermore))
+    ((Be that word our sign of parting bird or fiend I shrieked upstarting)
+     (Get thee back into the tempest and the Nights Plutonian shore)
+     (Leave no black plume as a token of that lie thy soul hath spoken)
+     (Leave my loneliness unbroken quit the bust above my door)
+     (Take thy beak from out my heart and take thy form from off my door)
+     (Quoth the Raven Nevermore))
+    ((And the Raven never flitting still is sitting still is sitting)
+     (On the pallid bust of Pallas just above my chamber door)
+     (And his eyes have all the seeming of a demons that is dreaming)
+     (And the lamp-light o er him streaming throws his shadow on the floor)
+     (And my soul from out that shadow that lies floating on the floor)
+     (Shall be lifted nevermore))
+    ))
+
+;;; Simple raven learning (uses structured poem)
+
+(defvar *thisword->nextwords* (make-hash-table :test #'equal))
+
+(defun learn-raven ()
+  (clrhash *thisword->nextwords*)
+  (loop for paragraph in *structured-raven*
+	do 
+	(loop for sentence in paragraph
+	      do
+	      (loop for (cur nxt) on `(:start ,@sentence :end)
+		    ;; Probabilities are modeled by number of copies -- so NOT PUSHNEW!
+		    do (push nxt (gethash cur *thisword->nextwords*))))))
+
+(defun compose-line ()
+  (loop with cur = :start
+        as options = (gethash cur *thisword->nextwords*)
+        as nxt = (nth (random (length options)) options)
+        until (eq nxt :end)
+        do (setq cur nxt)
+        collect cur))
+
+(defun compose-poem ()
+  (loop for paragraph in *structured-raven*
+	do (format t "~%~%")
+	(loop for sentence in paragraph
+              as this-length = (length sentence)
+              if (= this-length 0)
+              do (print nil)
+              else do (print (loop for random-line = (compose-line)
+				   until (= this-length (length random-line))
+				   finally (return random-line))))))
+
+(defun stwt () ;; show-*thisword->nextwords*-table
+  (loop for this-word being the hash-keys of *thisword->nextwords*
+	using (hash-value next-words)
+	do (print (list this-word next-words))))
+
+(learn-raven)
+(compose-poem)
