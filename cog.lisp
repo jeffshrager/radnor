@@ -1,8 +1,83 @@
 ;;; (load (compile-file "cog.lisp"))
 (setf *random-state* (make-random-state t))
-(ql:quickload :lla)
 
-;;; dot -Tpdf btree.dot -o btree.pdf
+;;; =====================================================================
+;;; Create a decision tree by asking questions.
+
+;;; The dtree is a set of triples comprising a distinguishing
+;;; question, and then a left/yes branch and a right/no branch. 
+
+(defvar *dtree* nil)
+
+(defun dtree-learn ()
+  (dtree-reset))
+
+(defun dtree-reset ()
+  (setf *dtree* nil)
+  (dtree-inner)
+  )
+
+(defun dtree-inner ()
+  (format t "Think of an animal.") (terpri)
+  (sleep 1)
+  (dtree-inner-r))
+
+(defun dtree-inner-r (&optional (dtree *dtree*) (upnode nil))
+  (cond ((null dtree) ;; Special case for very first time in.
+	 (let ((animal (read-from-string (ask "What is it (just the animal, not with 'a' or 'an')?"))))
+	   (setf *dtree* animal)
+	   (dtree-inner)))
+	((atom dtree)
+	 (if (yes-or-no-p "Is it a ~a?" dtree)
+	     (dtree-inner)
+	     (let* ((animal (read-from-string (ask "What is it (just the animal, not with 'a' or 'an')?")))
+		    (question (ask (format nil "What is a question that is yes for a(n) ~a and no for a(n) ~a" animal dtree))))
+	       (if upnode
+		   (nsubst `(,question ,animal ,dtree) dtree upnode)
+		   (setf *dtree* `(,question ,animal ,dtree)))
+	       (dtree-inner))))
+	(t (if (yes-or-no-p (first dtree))
+	       (dtree-inner-r (second dtree) dtree)
+	       (dtree-inner-r (third dtree) dtree)
+	       ))
+	))
+
+(defun ask (question)
+  (format t question) (terpri)
+  (read-line)) 
+
+;;; Displaying the DTREE
+
+(defun dtree2dot (&optional (dtree *dtree*))
+  (with-open-file (o "tree.dot" :direction :output :if-exists :supersede)
+    (format o "digraph BTree {
+  node [shape=record];
+
+  // Graph direction (top to bottom)
+  rankdir=TB;
+
+  // Define the B-tree nodes with keys and child pointers
+")
+    (dtreeout o dtree)
+    (format o "~%}~%" )))
+
+(defun dtreeout (o tree)
+  (if (atom (second tree))
+      (format o "~s -> ~s [label=\"yes\"];~%" (first tree) (second tree))
+      (progn 
+	(format o "~s -> ~s [label=\"yes\"];~%" (first tree) (car (second tree)))
+	(dtreeout o (second tree))))
+  (if (atom (third tree))
+      (format o "~s -> ~s [label=\"no\"];~%" (first tree) (third tree))
+      (progn 
+	(format o "~s -> ~s [label=\"no\"];~%" (first tree) (car (third tree)))
+	(dtreeout o (third tree)))))
+
+#|
+(dtree-learn)
+(dtree2dot)
+(uiop::launch-program "dot -Tpdf tree.dot -o tree.pdf")
+|#
 
 ;;; =====================================================================
 
@@ -116,26 +191,124 @@
 	(when trace-n (symvpprint smat symvec :trace-n trace-n :vsort? t))
 	finally (return symvec)))
 
+;;; DTREE version of smat
+
+;;; To compute distance matrix we need to be able to compute the
+;;; length of the patth the root and each leaf.
+
+(defvar *paths* nil)
+
+(defun cache-paths-to-leaves ()
+  (setf *paths* nil)
+  (path-to-leaves-r *dtree* nil)
+  (mapcar #'print *paths*)
+  :done
+  )
+
+(defun path-to-leaves-r (tree path)
+  (cond ((atom tree) (push (cons tree (reverse path)) *paths*))
+       	(t (list (path-to-leaves-r (second tree) (cons (cons :yes (first tree)) path))
+		 (path-to-leaves-r (third tree) (cons (cons :no (first tree)) path))))))
+
+
+;;; Now we can make the distance matrix between the leaves
+
+(defun all-leaves ()
+  (mapcar #'car *paths*))
+
+(defun path-to (leaf)
+  (cdr (assoc leaf *paths* :test #'string-equal)))
+
+(defun length-to (leaf)
+  (length (path-to leaf)))
+
+(defun depth-to-common-node (p1 p2)
+  (let* ((cn (cdar (intersection p1 p2 :test #'(lambda (a b) (equal (cdr a) (cdr b))))))) ;; Ignore the yes/no
+    (position cn p1 :test #'(lambda (a b) (equal a (cdr b)))) 
+    ))
+
+(defun distance-between (l1 l2)
+  (if (equal l1 l2) 0
+      (let* ((p1 (path-to l1))
+	     (p2 (path-to l2)))
+	(- (+ (length p1) (length p2))
+	   (* 2 (depth-to-common-node p1 p2))))))
+  
+(setf *dtree*
+      '("Is it a kind of monkey?"
+	("Did Dianne Fosse study them?" APE
+	 ("Are they matriarcal?" BONOBO
+	  ("Does they have stripped tails?" LEMUR
+					    ("Does they program computers?" HUMAN BABOON))))
+	("Does it have a long neck?"
+	 ("Is it a bird?" ("Are they the heaviest flying bird?" SWAN HERON) GIRAFFE)
+	 ("Does it live in water?"
+	  ("Does it have a shell?" TURTLE
+				   ("Does it live in the ocean?" ("Do they bark?" SEAL WHALE) HIPPO))
+	  ("Is it cold blooded?" ("Does it live in soil?" WORM LIZARD)
+				 ("Is it the king of the beasts?" LION CAT))))))
+
+#|
+(defun create-smat-from-dtree ()
+  (cache-paths-to-leaves)
+  (let* ((syms (all-leaves))
+	(nsyms (length syms))
+	(smat (make-array (list nsyms nsyms))))
+    (loop for sym1 in syms
+	  as p1 from 0 by 1
+	  do (loop for sym2 in syms
+		   as p2 from 0 by 1
+		   as d = (distance-between sym1 sym2)
+		   do (setf (aref smat p1 p2) (- d))))
+    (make-smat :syms syms :mat smat)))
+|#
+
+(defun create-snet-from-dtree ()
+  (cache-paths-to-leaves)
+  (let* ((syms (all-leaves)))
+    (loop for sym1 in syms
+	  append (loop for sym2 in syms
+		   as d = (distance-between sym1 sym2)
+		   collect `(,sym1 ,(- d) ,sym2)))))
+
 #|
 
-;;; Semantic Net Testing:
+;;; Semantic Net on the dtree:
+
+(defparameter *terms* (all-leaves))
+(setq *snet* (create-snet-from-dtree))
+(defparameter *smat* (snet->smat *snet*))
+(relations2dot *snet* "anet.dot")
+(uiop::launch-program "dot -Tpdf anet.dot -o anet.pdf")
+(print *smat*)
+(defun dtree-sstest (initsymvals &optional (cycles 10))
+  (let* ((initsymvec (symvals->symvec initsymvals *smat*)))
+    (symvpprint *smat* initsymvec :vsort? t)
+    (spreadloop *smat* initsymvec cycles :trace-n t)))
+(defparameter *initsymvals* '((cat 1.0) (human 1.0)))
+(dtree-sstest *initsymvals*)
+
+;;; Random semantic net
 
 (defparameter *terms*
   '(car bus school ambulance stop fire slow slow fast brake accelerator
     brake glass water drink teen eat swim drown hospital))
 (defparameter *snet* (create-random-network *terms*))
 (defparameter *smat* (snet->smat *snet*))
-(relations2dot *snet* "ss.dot")
+(relations2dot *snet* "rnet.dot")
+(uiop::launch-program "dot -Tpdf rnet.dot -o rnet.pdf")
 (defparameter *initsymvals* '((drown 1.0)))
-(defun sstest1 (initsymvals &optional (cycles 10))
+(defun random-sstest (initsymvals &optional (cycles 10))
   (print *smat*)
   (let* ((initsymvec (symvals->symvec initsymvals *smat*)))
     (symvpprint *smat* initsymvec :vsort? t)
     (spreadloop *smat* initsymvec cycles :trace-n t)))
-;(sstest1 *initsymvals*)
+(random-sstest *initsymvals*)
+
 |#
 
 ;;; =====================================================================
+;;; Semantic Graph Version of a Language Model
 
 (defparameter *the-raven*
   '(Once upon a midnight dreary while I pondered  weak and weary
@@ -354,6 +527,22 @@ And my soul from out that shadow that lies floating on the floor
       :displaced-to arr 
        :displaced-index-offset (* row (array-dimension arr 1))))
 
+#|
+
+;; Looks like (0.5 0.05 1 1 2 0.12) and (0.4 0.05 1 1 2 0.12) are winners
+
+(caw '(once upon a midnit dreary)
+     :cycles 1
+     :context-limit 2
+     :trace-n nil
+     :noise-depth-limit 1
+     :n-responses 25
+     :supress-direct-repetition? t
+     )
+
+|#
+
+
 ;;; Now we need to optimize the parameters. The test is easy, because
 ;;; we have the original.
 
@@ -417,9 +606,8 @@ And my soul from out that shadow that lies floating on the floor
 	))
   
 #|
-(untrace)
-;(trace score-raven caw)
-;(raven-search 5)
+
+(raven-search 5)
 ;; Looks like (0.5 0.05 1 1 2 0.12) and (0.4 0.05 1 1 2 0.12) are winners
 (setf *params*
   '(
@@ -433,159 +621,8 @@ And my soul from out that shadow that lies floating on the floor
     ))
 (trace score-raven caw)
 (raven-search 5)
+
 |#
-
-;;; =====================================================================
-
-;;; Create a decision tree by asking questions.
-
-;;; The dtree is a set of triples comprising a distinguishing
-;;; question, and then a left/yes branch and a right/no branch. 
-
-(defvar *dtree* nil)
-
-(defun dtree ()
-  (dtree-reset))
-
-(defun dtree-reset ()
-  (setf *dtree* nil)
-  (dtree-inner)
-  )
-
-(defun dtree-inner ()
-  (format t "Think of an animal.") (terpri)
-  (sleep 1)
-  (dtree-learn))
-
-(defun dtree-learn (&optional (dtree *dtree*) (upnode nil))
-  (cond ((null dtree) ;; Special case for very first time in.
-	 (let ((animal (read-from-string (ask "What is it (just the animal, not with 'a' or 'an')?"))))
-	   (setf *dtree* animal)
-	   (dtree-inner)))
-	((atom dtree)
-	 (if (yes-or-no-p "Is it a ~a?" dtree)
-	     (dtree-inner)
-	     (let* ((animal (read-from-string (ask "What is it (just the animal, not with 'a' or 'an')?")))
-		    (question (ask (format nil "What is a question that is yes for a(n) ~a and no for a(n) ~a" animal dtree))))
-	       (if upnode
-		   (nsubst `(,question ,animal ,dtree) dtree upnode)
-		   (setf *dtree* `(,question ,animal ,dtree)))
-	       (dtree-inner))))
-	(t (if (yes-or-no-p (first dtree))
-	       (dtree-learn (second dtree) dtree)
-	       (dtree-learn (third dtree) dtree)
-	       ))
-	))
-
-(defun ask (question)
-  (format t question) (terpri)
-  (read-line)) 
-
-;;; To compute distance matrix we need to be able to compute the
-;;; length of the patth the root and each leaf.
-
-(defvar *paths* nil)
-
-(defun cache-paths-to-leaves ()
-  (setf *paths* nil)
-  (path-to-leaves-r *dtree* nil)
-  (mapcar #'print *paths*)
-  :done
-  )
-
-(defun path-to-leaves-r (tree path)
-  (cond ((atom tree) (push (cons tree (reverse path)) *paths*))
-       	(t (list (path-to-leaves-r (second tree) (cons (cons :yes (first tree)) path))
-		 (path-to-leaves-r (third tree) (cons (cons :no (first tree)) path))))))
-
-
-;;; Now we can make the distance matrix between the leaves
-
-(defun all-leaves ()
-  (mapcar #'car *paths*))
-
-(defun path-to (leaf)
-  (cdr (assoc leaf *paths* :test #'string-equal)))
-
-(defun length-to (leaf)
-  (length (path-to leaf)))
-
-(defun depth-to-common-node (p1 p2)
-  (let* ((cn (cdar (intersection p1 p2 :test #'(lambda (a b) (equal (cdr a) (cdr b))))))) ;; Ignore the yes/no
-    (position cn p1 :test #'(lambda (a b) (equal a (cdr b)))) 
-    ))
-
-(defun distance-between (l1 l2)
-  (if (equal l1 l2) 0
-      (let* ((p1 (path-to l1))
-	     (p2 (path-to l2)))
-	(- (+ (length p1) (length p2))
-	   (* 2 (depth-to-common-node p1 p2))))))
-  
-(setf *dtree*
-      '("Is it a kind of monkey?"
-	("Did Dianne Fosse study them?" APE
-	 ("Are they matriarcal?" BONOBO
-	  ("Does they have stripped tails?" LEMUR
-					    ("Does they program computers?" HUMAN BABOON))))
-	("Does it have a long neck?"
-	 ("Is it a bird?" ("Are they the heaviest flying bird?" SWAN HERON) GIRAFFE)
-	 ("Does it live in water?"
-	  ("Does it have a shell?" TURTLE
-				   ("Does it live in the ocean?" ("Do they bark?" SEAL WHALE) HIPPO))
-	  ("Is it cold blooded?" ("Does it live in soil?" WORM LIZARD)
-				 ("Is it the king of the beasts?" LION CAT))))))
-
-(defun create-smat-from-dtree ()
-  (cache-paths-to-leaves)
-  (let* ((syms (all-leaves))
-	(nsyms (length syms))
-	(smat (make-array (list nsyms nsyms))))
-    (loop for sym1 in syms
-	  as p1 from 0 by 1
-	  do (loop for sym2 in syms
-		   as p2 from 0 by 1
-		   as d = (distance-between sym1 sym2)
-		   do (setf (aref smat p1 p2) (- d))))
-    (make-smat :syms syms :mat smat)))
-
-#|
-(setq *smat* (create-smat-from-dtree))
-
-(defparameter *initsymvals* '((cat 1.0) (human 1.0)))
-(defun sstest2 (initsymvals &optional (cycles 10))
-  (print *smat*)
-  (let* ((initsymvec (symvals->symvec initsymvals *smat*)))
-    (symvpprint *smat* initsymvec :vsort? t)
-    (spreadloop *smat* initsymvec cycles :trace-n t)))
-(sstest2 *initsymvals*)
-|#
-
-(defun dtree2dot (&optional (dtree *dtree*))
-  (with-open-file (o "tree.dot" :direction :output :if-exists :supersede)
-    (format o "digraph BTree {
-  node [shape=record];
-
-  // Graph direction (top to bottom)
-  rankdir=TB;
-
-  // Define the B-tree nodes with keys and child pointers
-")
-    (dtreeout o dtree)
-    (format o "~%}~%" )))
-
-(defun dtreeout (o tree)
-  (if (atom (second tree))
-      (format o "~s -> ~s [label=\"yes\"];~%" (first tree) (second tree))
-      (progn 
-	(format o "~s -> ~s [label=\"yes\"];~%" (first tree) (car (second tree)))
-	(dtreeout o (second tree))))
-  (if (atom (third tree))
-      (format o "~s -> ~s [label=\"no\"];~%" (first tree) (third tree))
-      (progn 
-	(format o "~s -> ~s [label=\"no\"];~%" (first tree) (car (third tree)))
-	(dtreeout o (third tree)))))
-
 
 ;;; =====================================================================
 ;;; Markov model RAVEN from Old Stemhacks code
@@ -756,6 +793,8 @@ And my soul from out that shadow that lies floating on the floor
 		   (pushnew next-word seenwords)))
     (format o "~%}~%" )))
 
+#|
+
 (format t "~%~%===================================================~%~%")
 (learn-raven)
 (format t "~%~%===================================================~%~%")
@@ -766,3 +805,7 @@ And my soul from out that shadow that lies floating on the floor
 (compose-poem :free-length? nil)
 (format t "~%~%===================================================~%~%")
 (wt2dot)
+(uiop::launch-program "dot -Tpdf raven.dot -o raven.pdf")
+
+|#
+
