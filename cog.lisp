@@ -106,6 +106,7 @@
 (defun create-random-network (terms &key (edges-per-term 5) (direct-next-term-connection-strength 1.0)) 
   (clrhash *term.term->strength*)
   (loop for (term direct-next-term) on terms
+	until (null direct-next-term)
 	with nterms = (length terms)
 	do
 	(setf (gethash (cons term direct-next-term) *term.term->strength*) direct-next-term-connection-strength)
@@ -258,8 +259,7 @@
 	  as p1 from 0 by 1
 	  do (loop for sym2 in syms
 		   as p2 from 0 by 1
-		   as d = (distance-between sym1 sym2)
-		   do (setf (aref smat p1 p2) (- d))))
+		   do (setf (aref smat p1 p2) (distance-between sym1 sym2))))
     (make-smat :syms syms :mat smat)))
 |#
 
@@ -268,8 +268,7 @@
   (let* ((syms (all-leaves)))
     (loop for sym1 in syms
 	  append (loop for sym2 in syms
-		   as d = (distance-between sym1 sym2)
-		   collect `(,sym1 ,(- d) ,sym2)))))
+		   collect `(,sym1 ,(- (distance-between sym1 sym2)) ,sym2)))))
 
 #|
 
@@ -277,7 +276,8 @@
 
 (defparameter *terms* (all-leaves))
 (setq *snet* (create-snet-from-dtree))
-(defparameter *smat* (snet->smat *snet*))
+(defparameter *smat* (snet->smat *snet* :selfref? nil))
+*smat*
 (relations2dot *snet* "anet.dot")
 (uiop::launch-program "dot -Tpdf anet.dot -o anet.pdf")
 (print *smat*)
@@ -285,27 +285,62 @@
   (let* ((initsymvec (symvals->symvec initsymvals *smat*)))
     (symvpprint *smat* initsymvec :vsort? t)
     (spreadloop *smat* initsymvec cycles :trace-n t)))
-(defparameter *initsymvals* '((cat 1.0) (human 1.0)))
+(defparameter *initsymvals* '((cat 1.0) (robin 1.0)))
 (dtree-sstest *initsymvals*)
 
-;;; Random semantic net
+;;; Random semantic net: (reset *terms* and *initsymvals* from students)
 
-(defparameter *terms*
-  '(car bus school ambulance stop fire slow slow fast brake accelerator
-    brake glass water drink teen eat swim drown hospital))
-(defparameter *snet* (create-random-network *terms*))
-(defparameter *smat* (snet->smat *snet*))
-(relations2dot *snet* "rnet.dot")
-(uiop::launch-program "dot -Tpdf rnet.dot -o rnet.pdf")
-(defparameter *initsymvals* '((drown 1.0)))
+|#
+
 (defun random-sstest (initsymvals &optional (cycles 10))
   (print *smat*)
   (let* ((initsymvec (symvals->symvec initsymvals *smat*)))
     (symvpprint *smat* initsymvec :vsort? t)
     (spreadloop *smat* initsymvec cycles :trace-n t)))
+
+#|
+
+(defparameter *terms*
+  '(car bus school ambulance stop fire slow slow fast brake accelerator
+    brake glass water drink teen eat swim drown hospital))
+(defparameter *snet* (create-random-network *terms*))
+(defparameter *smat* (snet->smat *snet* :selfref? nil))
+*smat*
+(relations2dot *snet* "rnet.dot")
+(uiop::launch-program "dot -Tpdf rnet.dot -o rnet.pdf")
+(defparameter *initsymvals* '((hospital 1.0) (car 1.0)))
 (random-sstest *initsymvals*)
 
 |#
+
+;;; Based on google completion:
+
+(defun load-snet-from-gcomplete-output ()
+  (with-open-file
+      (i "gcomplete.out")
+    (loop as entry = (ignore-errors (read i nil :eof))
+	  with results = nil
+	  until (eq :eof entry)
+	  do
+	  (let ((from (second entry))
+		(to (sixth entry)))
+	    (when (and from to)
+	      (pushnew `(,from ,(+ 0.5 (/ (random 50) 50.0)) ,to) results  :test #'equal)))
+	  finally (return results))))
+
+#| 
+;;; Change the key in gcomplete.py then:
+;;; python3 gcomplete.py
+(setf *snet* (load-snet-from-gcomplete-output))
+(defparameter *smat* (snet->smat *snet* :selfref? nil))
+*smat*
+(relations2dot *snet* "gnet.dot")
+(uiop::launch-program "dot -Tpdf gnet.dot -o gnet.pdf")
+;;; Change these:
+(defparameter *initsymvals* '((cell 1.0)))
+(random-sstest *initsymvals*)
+|#
+
 
 ;;; =====================================================================
 ;;; Semantic Graph Version of a Language Model
@@ -795,15 +830,10 @@ And my soul from out that shadow that lies floating on the floor
 
 #|
 
-(format t "~%~%===================================================~%~%")
 (learn-raven)
-(format t "~%~%===================================================~%~%")
 (stwt)
-(format t "~%~%===================================================~%~%")
 (compose-poem :free-length? t)
-(format t "~%~%===================================================~%~%")
 (compose-poem :free-length? nil)
-(format t "~%~%===================================================~%~%")
 (wt2dot)
 (uiop::launch-program "dot -Tpdf raven.dot -o raven.pdf")
 
