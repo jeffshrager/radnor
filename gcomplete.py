@@ -1,4 +1,4 @@
-import requests, json, time
+import requests, json, time, re
 
 headers = {
     "User-Agent":
@@ -12,10 +12,12 @@ f = open("gcomplete.out", "w")
 
 def gscrape(key,depth):
     if depth > 0:
-        response = requests.get('http://google.com/complete/search?client=chrome&q=a '+key+' is like ', headers=headers)
+        response = requests.get('http://google.com/complete/search?client=chrome&q=a '+key+target,headers=headers)
         for result in json.loads(response.text)[1]:
             if target in result:
                 newkey = result[2+ltarget+result.find(target):]
+                # Get rid of leading "a " "an " or "the "
+                # newkey = re.sub(r'\b(?:a |an |the )\s+', '', newkey, count=1)
                 if ' ' not in newkey:
                     output = '('+result+')'
                     print(output)

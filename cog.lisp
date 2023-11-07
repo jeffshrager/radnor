@@ -1,6 +1,10 @@
 ;;; (load (compile-file "cog.lisp"))
 (setf *random-state* (make-random-state t))
 
+;;; How LLMs work: Combination of Term Similarity (a model for concept
+;;; similarity) and next word prediction (a model for fluent
+;;; language).
+
 ;;; =====================================================================
 ;;; Create a decision tree by asking questions.
 
@@ -270,6 +274,8 @@
 	  append (loop for sym2 in syms
 		   collect `(,sym1 ,(- (distance-between sym1 sym2)) ,sym2)))))
 
+(defvar *smat* nil)
+
 #|
 
 ;;; Semantic Net on the dtree:
@@ -318,15 +324,22 @@
 (defun load-snet-from-gcomplete-output ()
   (with-open-file
       (i "gcomplete.out")
-    (loop as entry = (ignore-errors (read i nil :eof))
-	  with results = nil
-	  until (eq :eof entry)
-	  do
-	  (let ((from (second entry))
-		(to (sixth entry)))
-	    (when (and from to)
-	      (pushnew `(,from ,(+ 0.5 (/ (random 50) 50.0)) ,to) results  :test #'equal)))
-	  finally (return results))))
+    ;; This weirdness of doing the link strengths after the collection
+    ;; is a cheaty way of using pushnew to remdups. If we were to put
+    ;; in numbers in the inner loop we'd need a complicated test for
+    ;; the pushnew ... In retrospect that might have been easier!
+    (loop for entry in 
+	  (loop as entry = (ignore-errors (read i nil :eof))
+		with results = nil
+		until (eq :eof entry)
+		do
+		(let ((from (second entry))
+		      (to (sixth entry)))
+		  (when (and from to)
+		    (pushnew `(,from -> ,to) results  :test #'equal)))
+		finally (return results))
+	  do (setf (second entry) (+ 0.5 (/ (random 50) 50.0)))
+	  collect entry)))
 
 #| 
 ;;; Change the key in gcomplete.py then:
