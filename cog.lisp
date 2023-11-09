@@ -854,7 +854,7 @@ And my soul from out that shadow that lies floating on the floor
 	(loop for sentence in paragraph
 	      do
 	      (learn-from-sentence sentence)))
-  (setf *n-unique-words* (length *all-unique-words*))
+  (format nil "~a unique words" (setf *n-unique-words* (length *all-unique-words*)))
   )
 
 (defun learn-from-sentence (sentence)
@@ -872,10 +872,10 @@ And my soul from out that shadow that lies floating on the floor
 		     (nth (random *n-unique-words*) *all-unique-words*)
 		     (nth (random (length options)) options))
         until (eq nxt :end)
-        do (setq cur nxt)
+        do (setq cur nxt) ;; This conveniently  hides our :start
         collect cur))
 
-(defun compose-poem (&key (free-length? t) (randomness-1-in-n 10))
+(defun compose-poem-freely (&key (free-length? t) (randomness-1-in-n 10))
   (format t "[[Think: Do you want to call (learn-raven) first?]]~%~%")
   (sleep 2)
   (loop for paragraph in *structured-raven*
@@ -921,9 +921,9 @@ And my soul from out that shadow that lies floating on the floor
 (learn-raven)
 (raven-show)
 (stwt)
-(compose-poem :free-length? t :randomness-1-in-n nil)
-(compose-poem :free-length? t :randomness-1-in-n 2)
-(compose-poem :free-length? t :randomness-1-in-n 10)
+(compose-poem-freely :free-length? t :randomness-1-in-n nil)
+(compose-poem-freely :free-length? t :randomness-1-in-n 2)
+(compose-poem-freely :free-length? t :randomness-1-in-n 10)
 (wt2dot)
 (uiop::launch-program "dot -Tpdf raven.dot -o raven.pdf")
 
@@ -946,11 +946,11 @@ And my soul from out that shadow that lies floating on the floor
 			  (2 (learn-from-sentence l2))
 			  (t (error "Something's wrong. You chose: ~a" choice)))))))
 
-
 (defun quoth-not-the? (s)
-  (let* ((q+ (member 'quoth s))
-	 (q++ (second q+)))
-    (and q+ q++ (not (eq 'the q++)))))
+  (and (not (eq 'quoth (first s)))
+       (let* ((q+ (member 'quoth s))
+	      (q++ (second q+)))
+	 (and q+ q++ (not (eq 'the q++))))))
 
 (defun auto-rlhf (&key (randomness-1-in-n 5))
   (learn-raven)
@@ -965,9 +965,55 @@ And my soul from out that shadow that lies floating on the floor
   (raven-show)
   )
 
-
 #|
 (learn-raven)
 (rlhf)
 (raven-show)
+(auto-rlhf)
+(raven-show)
+(compose-poem-freely :free-length? nil :randomness-1-in-n nil)
+|#
+
+(defvar *stop-words*
+  '(:start :end the and i my of this that a door chamber)
+  )
+
+(defun compose-line-in-context (context) 
+  ;; Raise the probabiliy of any shared following words
+  ;; FFF Doesn't allow randomness, but could easily
+  (loop with cur = :start
+	;; We add to the option list, all the options from the context
+	;; This has the unfortunate effect of reducing the :end token
+	;; density, so we add one of those for each optionally added
+	;; word.
+        as options = (append (gethash cur *thisword->nextwords*)
+			     (loop for conword in context
+				   unless (member conword *stop-words*)
+				   append (cons :end (gethash conword  *thisword->nextwords*))))
+        as nxt = (nth (random (length options)) options)
+        until (eq nxt :end)
+        do (setq cur nxt) 
+        collect cur))
+  
+(defun compose-poem-using-context ()
+  (format t "[[Think: Do you want to call (learn-raven) first?]]~%~%")
+  (sleep 2)
+  (loop for paragraph in *structured-raven*
+	do (format t "~%~%")
+	(sleep 1)
+	(loop for sentence in paragraph
+	      with context = (print (first paragraph))
+              as this-length = (length sentence)
+              if (= this-length 0)
+              do (print nil)
+              else do
+	      (sleep 0.25)
+	      (setf context 
+		    (print (loop for random-line = (compose-line-in-context context)
+				 until (= this-length (length random-line))
+				 finally (return random-line)))))))
+
+#|
+(learn-raven)
+(compose-poem-using-context)
 |#
