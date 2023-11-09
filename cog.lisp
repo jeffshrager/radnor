@@ -1,5 +1,72 @@
 ;;; (load (compile-file "cog.lisp"))
+
+(setf *print-pretty* nil *print-length* 500)
+
+;;; AI vs. Cognitive Science (lightbulb joke)
+;;; Most useful math: Bayesian Statistics and Graph Theory (Linear Algebra esp. Matrix Algebra)
+;;; Short long history of chatbots.
+
 (setf *random-state* (make-random-state t))
+
+#|
+
+-----------------------------------------------------------------
+      ELIZA -- A Computer Program for the Study of Natural
+         Language Communication Between Man and Machine
+DOCTOR script by Joseph Weizenbaum, 1966  (CC0 1.0) Public Domain
+ELIZA implementation by Ant & Max Hay, 2023  (CC0 1.0) Pub Domain
+-----------------------------------------------------------------
+
+  // --- exact conversation quoted in Weizenbaum's 1966 CACM paper ---
+
+        "Men are all alike.",
+        "IN WHAT WAY",
+
+        "They're always bugging us about something or other.",
+        "CAN YOU THINK OF A SPECIFIC EXAMPLE",
+
+        "Well, my boyfriend made me come here.",
+        "YOUR BOYFRIEND MADE YOU COME HERE",
+
+        "He says I'm depressed much of the time.",
+        "I AM SORRY TO HEAR YOU ARE DEPRESSED",
+
+        "It's true. I am unhappy.",
+        "DO YOU THINK COMING HERE WILL HELP YOU NOT TO BE UNHAPPY",
+
+        "I need some help, that much seems certain.",
+        "WHAT WOULD IT MEAN TO YOU IF YOU GOT SOME HELP",
+
+        "Perhaps I could learn to get along with my mother.",
+        "TELL ME MORE ABOUT YOUR FAMILY",
+
+        "My mother takes care of me.",
+        "WHO ELSE IN YOUR FAMILY TAKES CARE OF YOU",
+
+        "My father.",
+        "YOUR FATHER",
+
+        "You are like my father in some ways.",
+        "WHAT RESEMBLANCE DO YOU SEE",
+
+        "You are not very aggressive but I think you don't want me to notice that.",
+        "WHAT MAKES YOU THINK I AM NOT VERY AGGRESSIVE",
+
+        "You don't argue with me.",
+        "WHY DO YOU THINK I DON'T ARGUE WITH YOU",
+
+        "You are afraid of me.",
+        "DOES IT PLEASE YOU TO BELIEVE I AM AFRAID OF YOU",
+
+        "My father is afraid of everybody.",
+        "WHAT ELSE COMES TO MIND WHEN YOU THINK OF YOUR FATHER",
+
+        "Bullies.",
+        "DOES THAT HAVE ANYTHING TO DO WITH THE FACT THAT YOUR BOYFRIEND MADE YOU COME HERE"
+
+https://vintagecomputer.net/cisc367/Creative%20Computing%20Jul-Aug%201977%20Eliza%20BASIC%20listing.pdf
+
+|#
 
 ;;; How LLMs work: Combination of Term Similarity (a model for concept
 ;;; similarity) and next word prediction (a model for fluent
@@ -252,20 +319,6 @@
 				   ("Does it live in the ocean?" ("Do they bark?" SEAL WHALE) HIPPO))
 	  ("Is it cold blooded?" ("Does it live in soil?" WORM LIZARD)
 				 ("Is it the king of the beasts?" LION CAT))))))
-
-#|
-(defun create-smat-from-dtree ()
-  (cache-paths-to-leaves)
-  (let* ((syms (all-leaves))
-	(nsyms (length syms))
-	(smat (make-array (list nsyms nsyms))))
-    (loop for sym1 in syms
-	  as p1 from 0 by 1
-	  do (loop for sym2 in syms
-		   as p2 from 0 by 1
-		   do (setf (aref smat p1 p2) (distance-between sym1 sym2))))
-    (make-smat :syms syms :mat smat)))
-|#
 
 (defun create-snet-from-dtree ()
   (cache-paths-to-leaves)
@@ -579,7 +632,7 @@ And my soul from out that shadow that lies floating on the floor
 
 ;; Looks like (0.5 0.05 1 1 2 0.12) and (0.4 0.05 1 1 2 0.12) are winners
 
-(caw '(once upon a midnit dreary)
+(caw '(once upon a midnight dreary)
      :cycles 1
      :context-limit 2
      :trace-n nil
@@ -790,33 +843,51 @@ And my soul from out that shadow that lies floating on the floor
 ;;; Simple raven learning (uses structured poem)
 
 (defvar *thisword->nextwords* (make-hash-table :test #'equal))
+(defvar *all-unique-words* nil)
+(defvar *n-unique-words* nil)
 
 (defun learn-raven ()
   (clrhash *thisword->nextwords*)
+  (setf *all-unique-words* nil *n-unique-words* 0)
   (loop for paragraph in *structured-raven*
 	do 
 	(loop for sentence in paragraph
 	      do
-	      (loop for (cur nxt) on `(:start ,@sentence :end)
-		    ;; Probabilities are modeled by number of copies -- so NOT PUSHNEW!
-		    do (push nxt (gethash cur *thisword->nextwords*))))))
+	      (learn-from-sentence sentence)))
+  (setf *n-unique-words* (length *all-unique-words*))
+  )
 
-(defun compose-line ()
+(defun learn-from-sentence (sentence)
+  (loop for (cur nxt) on `(:start ,@sentence :end)
+	;; Probabilities are modeled by number of copies -- so NOT PUSHNEW!
+	do
+	(unless (member cur `(:start :end))
+	  (pushnew cur *all-unique-words*))
+	(push nxt (gethash cur *thisword->nextwords*))))
+
+(defun compose-line (&key (randomness-1-in-n 10))
   (loop with cur = :start
         as options = (gethash cur *thisword->nextwords*)
-        as nxt = (nth (random (length options)) options)
+        as nxt = (if (when (and randomness-1-in-n) (zerop (random randomness-1-in-n)))
+		     (nth (random *n-unique-words*) *all-unique-words*)
+		     (nth (random (length options)) options))
         until (eq nxt :end)
         do (setq cur nxt)
         collect cur))
 
-(defun compose-poem (&key (free-length? t))
+(defun compose-poem (&key (free-length? t) (randomness-1-in-n 10))
+  (format t "[[Think: Do you want to call (learn-raven) first?]]~%~%")
+  (sleep 2)
   (loop for paragraph in *structured-raven*
 	do (format t "~%~%")
+	(sleep 1)
 	(loop for sentence in paragraph
               as this-length = (length sentence)
               if (= this-length 0)
               do (print nil)
-              else do (print (loop for random-line = (compose-line)
+              else do
+	      (sleep 0.25)
+	      (print (loop for random-line = (compose-line :randomness-1-in-n randomness-1-in-n)
 				   until (or free-length? (= this-length (length random-line)))
 				   finally (return random-line))))))
 
@@ -841,14 +912,62 @@ And my soul from out that shadow that lies floating on the floor
 		   (pushnew next-word seenwords)))
     (format o "~%}~%" )))
 
+(defun raven-show ()
+  (loop for word in '(quoth the raven nevermore :start)
+	do (format t "~a -> ~a~%" word (gethash word *thisword->nextwords*))))
+
 #|
 
 (learn-raven)
+(raven-show)
 (stwt)
-(compose-poem :free-length? t)
-(compose-poem :free-length? nil)
+(compose-poem :free-length? t :randomness-1-in-n nil)
+(compose-poem :free-length? t :randomness-1-in-n 2)
+(compose-poem :free-length? t :randomness-1-in-n 10)
 (wt2dot)
 (uiop::launch-program "dot -Tpdf raven.dot -o raven.pdf")
 
 |#
 
+;;; RLHF Raven Learning by Human Feedback :-)
+
+(defun rlhf (&key (randomness-1-in-n 5))
+  (learn-raven)
+  (loop for a below 100
+	do 
+	(let ((l1 (compose-line :randomness-1-in-n randomness-1-in-n))
+	      (l2 (compose-line :randomness-1-in-n randomness-1-in-n)))
+	  (format t "1: ~a~%" l1) 
+	  (format t "2: ~a~%" l2) 
+	  (loop as choice = (ignore-errors (read-from-string (ask "Which line do you like better? (Type just a 1 or a 2)?")))
+		until (and choice (numberp choice) (> choice 0) (< choice 3))
+		finally (case choice
+			  (1 (learn-from-sentence l1))
+			  (2 (learn-from-sentence l2))
+			  (t (error "Something's wrong. You chose: ~a" choice)))))))
+
+
+(defun quoth-not-the? (s)
+  (let* ((q+ (member 'quoth s))
+	 (q++ (second q+)))
+    (and q+ q++ (not (eq 'the q++)))))
+
+(defun auto-rlhf (&key (randomness-1-in-n 5))
+  (learn-raven)
+  (raven-show)
+  (loop for a below 1000
+	do 
+	(let* ((l1 (compose-line :randomness-1-in-n randomness-1-in-n))
+	       (l2 (compose-line :randomness-1-in-n randomness-1-in-n)))
+	  
+	  (if (quoth-not-the? l1) (learn-from-sentence l1))
+	  (if (quoth-not-the? l2) (learn-from-sentence l2))))
+  (raven-show)
+  )
+
+
+#|
+(learn-raven)
+(rlhf)
+(raven-show)
+|#

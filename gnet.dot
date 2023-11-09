@@ -1,283 +1,65 @@
 digraph G {
-  FRIEND -> QUILT [label="0.62"];
+  FRIEND -> QUILT [label="0.74"];
 
-  WOMAN -> SHADOW [label="1.46"];
+  BEER -> PILSNER [label="0.91999996"];
 
-  WOMAN -> SHADOW [label="1.3399999"];
+  FLOWER -> PEONY [label="1.04"];
 
-  BEER -> PILSNER [label="0.68"];
+  LIFE -> MIRROR [label="1.0799999"];
 
-  WOMAN -> SHADOW [label="0.86"];
+  LIFE -> BOOK [label="1.14"];
 
-  WOMAN -> BEER [label="1.0799999"];
+  LIFE -> BICYCLE [label="1.38"];
 
-  WOMAN -> CAR [label="0.65999997"];
+  LIFE -> GARDEN [label="1.4200001"];
 
-  WOMAN -> ROSE [label="0.54"];
+  PHONE -> BLACKBERRY [label="0.74"];
 
-  WOMAN -> FLOWER [label="1.46"];
+  PHONE -> CELL [label="1.36"];
 
-  WOMAN -> BEER [label="0.74"];
+  CHURCH -> HOSPITAL [label="0.5"];
 
-  WOMAN -> SHADOW [label="1.44"];
+  HOSPITAL -> BIRDCAGE [label="1.3199999"];
 
-  WOMAN -> CAR [label="1.46"];
+  WOMAN -> SHADOW [label="0.56"];
 
-  WOMAN -> ROSE [label="0.94"];
+  WOMAN -> BEER [label="1.12"];
 
-  WOMAN -> FLOWER [label="0.5"];
-
-  CAR -> WOMAN [label="0.6"];
-
-  CELL -> MALL [label="1.24"];
-
-  CELL -> PHONE [label="0.8"];
-
-  CELL -> CIRCUS [label="0.6"];
-
-  CELL -> RESTAURANT [label="0.54"];
-
-  CELL -> HOSPITAL [label="0.84000003"];
-
-  CELL -> PRISON [label="0.62"];
-
-  CELL -> HOUSE [label="1.38"];
-
-  CELL -> COMPUTER [label="0.88"];
-
-  CELL -> CITY [label="1.36"];
-
-  CELL -> CAR [label="0.8"];
-
-  CAR -> CELL [label="1.36"];
-
-  WOMAN -> CAR [label="0.8"];
-
-  WOMAN -> SHADOW [label="0.6"];
-
-  WOMAN -> BEER [label="1.06"];
-
-  WOMAN -> CAR [label="0.58"];
-
-  WOMAN -> ROSE [label="1.06"];
-
-  WOMAN -> FLOWER [label="1.44"];
+  WOMAN -> CAR [label="1.48"];
 
   WOMAN -> ROSE [label="1.36"];
 
-  FLOWER -> PEONY [label="0.65999997"];
+  WOMAN -> FLOWER [label="0.94"];
 
-  WOMAN -> SHADOW [label="0.58"];
+  CAR -> WOMAN [label="0.82"];
 
-  WOMAN -> BEER [label="0.76"];
+  CELL -> MALL [label="1.1"];
 
-  WOMAN -> CAR [label="0.72"];
+  CELL -> PHONE [label="1.1600001"];
 
-  WOMAN -> ROSE [label="0.7"];
+  CELL -> CIRCUS [label="0.96000004"];
 
-  WOMAN -> FLOWER [label="1.1600001"];
+  CELL -> RESTAURANT [label="1.0799999"];
 
-  LIFE -> MIRROR [label="0.98"];
+  CELL -> HOSPITAL [label="0.5"];
 
-  LIFE -> BOOK [label="1.1600001"];
+  CELL -> PRISON [label="0.84000003"];
 
-  LIFE -> BICYCLE [label="1.12"];
+  CELL -> HOUSE [label="1.44"];
 
-  LIFE -> GARDEN [label="0.56"];
+  CELL -> COMPUTER [label="1.24"];
 
-  WOMAN -> FLOWER [label="0.64"];
-
-  CAR -> WOMAN [label="1.22"];
-
-  CELL -> MALL [label="1.28"];
-
-  CELL -> MALL [label="1.4"];
-
-  CELL -> MALL [label="1.3"];
-
-  PHONE -> BLACKBERRY [label="0.6"];
-
-  CELL -> MALL [label="0.9"];
-
-  CELL -> PHONE [label="1.26"];
-
-  CELL -> CIRCUS [label="1.44"];
-
-  CELL -> RESTAURANT [label="1.38"];
-
-  CELL -> HOSPITAL [label="0.56"];
-
-  CELL -> PRISON [label="0.52"];
-
-  CELL -> HOUSE [label="0.52"];
-
-  CELL -> COMPUTER [label="1.0799999"];
-
-  CELL -> FACTORY [label="0.62"];
-
-  CELL -> CAR [label="1.4200001"];
-
-  CELL -> SCHOOL [label="1.24"];
-
-  PHONE -> CELL [label="0.56"];
-
-  CELL -> PHONE [label="1.3399999"];
-
-  CELL -> CIRCUS [label="0.76"];
-
-  CELL -> CIRCUS [label="1.06"];
-
-  CELL -> CIRCUS [label="0.62"];
-
-  CELL -> MALL [label="1.26"];
-
-  CELL -> PHONE [label="1.0"];
-
-  CELL -> CIRCUS [label="0.91999996"];
-
-  CELL -> RESTAURANT [label="0.56"];
-
-  CELL -> HOSPITAL [label="0.65999997"];
-
-  CELL -> PRISON [label="0.88"];
-
-  CELL -> HOUSE [label="1.36"];
-
-  CELL -> COMPUTER [label="0.6"];
-
-  CELL -> CITY [label="0.86"];
+  CELL -> CITY [label="0.52"];
 
   CELL -> FACTORY [label="0.74"];
 
-  CELL -> CAR [label="0.65999997"];
+  CELL -> CAR [label="0.96000004"];
 
-  CELL -> SCHOOL [label="0.5"];
+  SCHOOL -> CELL [label="0.74"];
 
-  CELL -> RESTAURANT [label="0.6"];
+  CELL -> SCHOOL [label="1.4200001"];
 
-  CELL -> HOSPITAL [label="1.1600001"];
-
-  CHURCH -> HOSPITAL [label="0.7"];
-
-  HOSPITAL -> BIRDCAGE [label="1.14"];
-
-  CELL -> HOSPITAL [label="0.54"];
-
-  CELL -> HOSPITAL [label="1.36"];
-
-  CHURCH -> HOSPITAL [label="1.3199999"];
-
-  HOSPITAL -> BIRDCAGE [label="0.68"];
-
-  CHURCH -> HOSPITAL [label="0.64"];
-
-  HOSPITAL -> BIRDCAGE [label="1.28"];
-
-  HOSPITAL -> BIRDCAGE [label="1.2"];
-
-  CELL -> PRISON [label="0.68"];
-
-  CELL -> HOUSE [label="1.1"];
-
-  CELL -> MALL [label="1.2"];
-
-  CELL -> PHONE [label="1.4200001"];
-
-  CELL -> CIRCUS [label="1.1600001"];
-
-  CELL -> RESTAURANT [label="1.3199999"];
-
-  CELL -> HOSPITAL [label="0.88"];
-
-  CELL -> PRISON [label="1.04"];
-
-  CELL -> HOUSE [label="0.64"];
-
-  CELL -> COMPUTER [label="1.26"];
-
-  CELL -> CITY [label="1.12"];
-
-  CELL -> FACTORY [label="0.96000004"];
-
-  CELL -> CAR [label="1.14"];
-
-  CELL -> SCHOOL [label="0.88"];
-
-  CELL -> COMPUTER [label="0.91999996"];
-
-  CELL -> CITY [label="1.06"];
-
-  CELL -> FACTORY [label="1.22"];
-
-  WOMAN -> SHADOW [label="1.4"];
-
-  WOMAN -> BEER [label="1.28"];
-
-  WOMAN -> CAR [label="1.1800001"];
-
-  WOMAN -> ROSE [label="0.68"];
-
-  WOMAN -> FLOWER [label="0.52"];
-
-  CAR -> WOMAN [label="1.0"];
-
-  CELL -> MALL [label="0.7"];
-
-  CELL -> PHONE [label="1.3199999"];
-
-  CELL -> CIRCUS [label="1.12"];
-
-  CELL -> RESTAURANT [label="0.68"];
-
-  CELL -> HOSPITAL [label="1.38"];
-
-  CELL -> PRISON [label="0.78"];
-
-  CELL -> HOUSE [label="0.62"];
-
-  CELL -> COMPUTER [label="0.82"];
-
-  CELL -> CITY [label="1.0"];
-
-  CELL -> FACTORY [label="1.06"];
-
-  CELL -> CAR [label="1.24"];
-
-  CELL -> SCHOOL [label="1.22"];
-
-  CAR -> CELL [label="1.46"];
-
-  CELL -> CAR [label="1.04"];
-
-  CELL -> MALL [label="0.94"];
-
-  CELL -> PHONE [label="1.12"];
-
-  CELL -> CIRCUS [label="1.4"];
-
-  CELL -> RESTAURANT [label="0.64"];
-
-  CELL -> HOSPITAL [label="0.91999996"];
-
-  CELL -> PRISON [label="0.86"];
-
-  CELL -> HOUSE [label="1.12"];
-
-  CELL -> COMPUTER [label="0.54"];
-
-  CELL -> CITY [label="1.4200001"];
-
-  CELL -> FACTORY [label="1.04"];
-
-  CELL -> CAR [label="0.54"];
-
-  CELL -> SCHOOL [label="1.1800001"];
-
-  SCHOOL -> CELL [label="1.3"];
-
-  CELL -> SCHOOL [label="0.86"];
-
-  CAR -> CELL [label="1.24"];
+  CAR -> CELL [label="1.14"];
 
 
 }

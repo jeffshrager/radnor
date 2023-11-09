@@ -16,8 +16,10 @@ def gscrape(key,depth):
         for result in json.loads(response.text)[1]:
             if target in result:
                 newkey = result[2+ltarget+result.find(target):]
-                # Get rid of leading "a " "an " or "the "
-                # newkey = re.sub(r'\b(?:a |an |the )\s+', '', newkey, count=1)
+                # Get rid of leading "a " "an " or "the " because that
+                # will screw the space test and limit the number of valid results
+                newkey = re.sub(r'\b(?:a |an |the )\s+', '', newkey, count=1)
+                print(newkey)
                 if ' ' not in newkey:
                     output = '('+result+')'
                     print(output)
