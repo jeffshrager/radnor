@@ -974,9 +974,14 @@ And my soul from out that shadow that lies floating on the floor
 (compose-poem-freely :free-length? nil :randomness-1-in-n nil)
 |#
 
-(defvar *stop-words*
-  '(:start :end the and i my of this that a door chamber)
-  )
+(defvar *stop-words* '(:start :end the and i my of this that a door
+  chamber it was on at from with then or there in but by thy his was
+  to into as it so what only for be if its))
+
+(defun uniquify (l)
+  (loop for (this . rest) on l
+	unless (member this rest)
+	collect this))
 
 (defun compose-line-in-context (context) 
   ;; Raise the probabiliy of any shared following words
@@ -985,11 +990,12 @@ And my soul from out that shadow that lies floating on the floor
 	;; We add to the option list, all the options from the context
 	;; This has the unfortunate effect of reducing the :end token
 	;; density, so we add one of those for each optionally added
-	;; word.
+	;; word. We also uniqify the additional words so as
+	;; not to overwhelm the local context
         as options = (append (gethash cur *thisword->nextwords*)
-			     (loop for conword in context
-				   unless (member conword *stop-words*)
-				   append (cons :end (gethash conword  *thisword->nextwords*))))
+			     (loop for conword in (uniquify context)
+				   ;; unless (member conword *stop-words*)
+				   append (cons :end (uniquify (gethash conword *thisword->nextwords*)))))
         as nxt = (nth (random (length options)) options)
         until (eq nxt :end)
         do (setq cur nxt) 
@@ -1017,3 +1023,7 @@ And my soul from out that shadow that lies floating on the floor
 (learn-raven)
 (compose-poem-using-context)
 |#
+
+
+
+
