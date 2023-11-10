@@ -1,10 +1,87 @@
-;;; (load (compile-file "cog.lisp"))
-
-(setf *print-pretty* nil *print-length* 500)
-
 ;;; AI vs. Cognitive Science (lightbulb joke)
 ;;; Most useful math: Bayesian Statistics and Graph Theory (Linear Algebra esp. Matrix Algebra)
 ;;; Short long history of chatbots.
+
+;;; (load (compile-file "cog.lisp"))
+(setf *print-pretty* nil *print-length* 500)
+
+#|
+
+;;; Simple learning and generation
+
+(learn-raven)
+(raven-show)
+(stwt)
+(compose-poem-freely :free-length? t :randomness-1-in-n nil)
+(compose-poem-freely :free-length? t :randomness-1-in-n 2)
+(compose-poem-freely :free-length? t :randomness-1-in-n 10)
+
+;;; Context-based generation
+
+(learn-raven)
+(compose-poem-using-context)
+
+;;; Raven(reinforcement)-Learning from Human Feedback
+
+(learn-raven)
+(rlhf)
+(raven-show)
+
+(auto-rlhf)
+(raven-show)
+(compose-poem-freely :free-length? nil :randomness-1-in-n nil)
+(compose-poem-using-context)
+
+;;; Learning decision trees
+
+(dtree-learn)
+(dtree2dot)
+(uiop::launch-program "dot -Tpdf tree.dot -o tree.pdf")
+
+;;; Random semnet
+(setf *print-pretty* t *print-length* 180)
+
+(defparameter *terms*
+  '(car bus school ambulance stop fire slow slow fast brake accelerator
+    brake glass water drink teen eat swim drown hospital))
+(defparameter *snet* (create-random-network *terms*))
+(defparameter *smat* (snet->smat *snet* :selfref? nil))
+*smat*
+(relations2dot *snet* "rnet.dot")
+(uiop::launch-program "dot -Tpdf rnet.dot -o rnet.pdf")
+(defparameter *initsymvals* '((hospital 1.0) (car 1.0)))
+(random-sstest *initsymvals*)
+
+;;; Semantic Net on the dtree:
+
+(defparameter *terms* (all-leaves))
+(setq *snet* (create-snet-from-dtree))
+(defparameter *smat* (snet->smat *snet* :selfref? nil))
+*smat*
+(relations2dot *snet* "anet.dot")
+(uiop::launch-program "dot -Tpdf anet.dot -o anet.pdf")
+(print *smat*)
+(defun dtree-sstest (initsymvals &optional (cycles 10))
+  (let* ((initsymvec (symvals->symvec initsymvals *smat*)))
+    (symvpprint *smat* initsymvec :vsort? t)
+    (spreadloop *smat* initsymvec cycles :trace-n t)))
+(defparameter *initsymvals* '((cat 1.0) (robin 1.0)))
+(dtree-sstest *initsymvals*)
+
+;;; Google-based semnet
+
+;;; Change the key in gcomplete.py then:
+;;; python3 gcomplete.py
+(setf *snet* (load-snet-from-gcomplete-output))
+(defparameter *smat* (snet->smat *snet* :selfref? nil))
+*smat*
+(relations2dot *snet* "gnet.dot")
+(uiop::launch-program "dot -Tpdf gnet.dot -o gnet.pdf")
+;;; Change these:
+(defparameter *initsymvals* '((cell 1.0)))
+(random-sstest *initsymvals*)
+
+|#
 
 (setf *random-state* (make-random-state t))
 
